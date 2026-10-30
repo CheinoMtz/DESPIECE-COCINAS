@@ -88,6 +88,22 @@ body.sin-precios .precio{display:none}
  <p class="nota">El ancho de caja es el ancho ya descontando 15 mm por cada tapa.</p>
 </section>
 
+<section class="no-imprimir" aria-label="Piezas extra">
+ <h2>Piezas extra (buró, mesa, closet, otros)</h2>
+ <div class="fila">
+  <label>Mueble<input id="xMueble" placeholder="Ej. Buró"></label>
+  <label>Pieza<input id="xNombre" placeholder="Ej. Lateral"></label>
+  <label>Largo (mm)<input id="xL" type="number" min="1"></label>
+  <label>Ancho (mm)<input id="xA" type="number" min="1"></label>
+  <label>Cantidad<input id="xC" type="number" value="1" min="1"></label>
+  <label>Material<select id="xMat"><option value="blanco">Blanco</option><option value="color">Color</option></select></label>
+  <label>Canto<select id="xCanto"><option value="no">Sin canto</option><option value="uno">1 lado largo</option><option value="perim">4 lados</option></select></label>
+  <button onclick="agregarExtra()">Agregar pieza</button>
+ </div>
+ <label class="precio" style="margin-top:8px">Herrajes y otros costos del proyecto ($): rieles, bisagras, jaladeras, etc.<input id="xOtros" type="number" min="0" value="0"></label>
+ <p class="nota">Las piezas extra entran a la lista de corte, a las hojas y al costo de material.</p>
+</section>
+<section aria-label="Piezas extra del proyecto"><h2>Piezas extra del proyecto</h2><div id="extras" class="tabla"></div></section>
 <section aria-label="Módulos"><h2>Módulos</h2><div id="lista"></div></section>
 <section aria-label="Resumen"><h2>Resumen</h2><div id="resumen"></div></section>
 <section aria-label="Despiece por módulo"><h2>Despiece por módulo</h2><div id="despiece"></div></section>
@@ -210,6 +226,9 @@ function empacar(lista, HL, HA) { // HL × HA = medidas de la hoja
 /* ============ CÁLCULO DEL PROYECTO ============ */
 function calcular(pr) {
   const todas = [], porModulo = pr.modulos.map(m => { const ps = despiece(m); todas.push(...ps); return ps; });
+  // Piezas extra (otros muebles): entran igual que las de los módulos
+  const extras = (pr.extras || []).map(x => ({ nombre: (x.mueble ? x.mueble + " · " : "") + x.nombre, l: r1(x.l), a: r1(x.a), c: x.c, mat: x.mat, canto: x.canto }));
+  todas.push(...extras);
   const cons = consolidar(todas);
   const m2 = mat => todas.filter(q => q.mat === mat).reduce((s, q) => s + q.l * q.a * q.c, 0) / 1e6;
   const canto = todas.reduce((s, q) => s + q.c * (q.canto === "perim" ? 2 * (q.l + q.a) : q.canto === "uno" ? Math.max(q.l, q.a) : 0), 0) / 1000;
@@ -223,7 +242,7 @@ function calcular(pr) {
   const mlBajos = pr.modulos.filter(m => m.tipo === "bajo").reduce((s, m) => s + (m.ancho + M * m.tapas) / 1000, 0);
   const blanco = m2("blanco"), color = m2("color");
   const tablero = hojasBlanco.length * precioHojaBlanco() + hojasColor.length * PRECIOS.hojaColor; // hojas completas
-  const material = tablero + canto * PRECIOS.cantoMl + herrajes + (pr.modulos.length ? PRECIOS.consumibles : 0);
+  const material = tablero + canto * PRECIOS.cantoMl + herrajes + ((pr.modulos.length || extras.length) ? PRECIOS.consumibles : 0) + (pr.otros || 0);
   const reglaA = PRECIOS.mlBajo * mlBajos, reglaB = material * PRECIOS.factorMaterial;
   return { porModulo, cons, blanco, color, canto, hojasBlanco, hojasColor, herrajes, mlBajos, tablero, material, reglaA, reglaB, precio: Math.max(reglaA, reglaB) };
 }
@@ -257,6 +276,17 @@ function agregarModulo() {
   if (m.ancho < 100 || m.alto < 200 || m.prof < 100) { alert("Revisa las medidas: ancho, alto y profundidad deben ser válidos."); return; }
   actual().modulos.push(m); $("fNombre").value = ""; guardar(); render();
 }
+function agregarExtra() {
+  const num = id => parseFloat($(id).value) || 0;
+  const x = { mueble: $("xMueble").value.trim(), nombre: $("xNombre").value.trim() || "Pieza", l: num("xL"), a: num("xA"), c: Math.max(1, Math.round(num("xC"))), mat: $("xMat").value, canto: $("xCanto").value };
+  if (x.l <= 0 || x.a <= 0) { alert("Escribe el largo y el ancho de la pieza."); return; }
+  const hoja = medidasHoja(x.mat);
+  if (Math.max(x.l, x.a) > hoja.l || Math.min(x.l, x.a) > hoja.a) { alert("La pieza no cabe en una hoja de " + hoja.l + " × " + hoja.a + " mm."); return; }
+  const pr = actual(); pr.extras = pr.extras || []; pr.extras.push(x);
+  ["xNombre", "xL", "xA"].forEach(id => $(id).value = ""); $("xC").value = 1; // el mueble se queda para agregar más piezas
+  guardar(); render();
+}
+function quitarExtra(i) { actual().extras.splice(i, 1); guardar(); render(); }
 function quitarModulo(i) { actual().modulos.splice(i, 1); guardar(); render(); }
 
 /* ============ DIBUJO DE HOJAS ============ */
@@ -279,6 +309,7 @@ function render() {
   const pr = actual(), r = calcular(pr);
   $("selProyecto").innerHTML = proyectos.map(p => '<option value="' + p.id + '"' + (p.id === actualId ? " selected" : "") + ">" + esc(p.nombre) + "</option>").join("");
   $("pNombre").value = pr.nombre; $("pCliente").value = pr.cliente; $("pTaller").value = leer(CLAVES.taller, "");
+  $("xOtros").value = pr.otros || 0;
   $("selHoja").value = leer(CLAVES.hojaBlanco, "2440x1220");
   $("chkPrecios").checked = leer(CLAVES.ocultar, false); document.body.classList.toggle("sin-precios", $("chkPrecios").checked);
   $("encabezadoImpresion").textContent = (leer(CLAVES.taller, "") || "TALLER").toUpperCase() + " · Uso interno · " + pr.nombre + " · " + pr.cliente + " · " + pr.fecha + " · " + pr.modulos.length + " módulos";
@@ -294,7 +325,7 @@ function render() {
   $("resumen").innerHTML = '<div class="resumen">' + dato("Metros lineales de bajos", fmt(r.mlBajos)) + dato("Hojas estimadas", hb + " blanco + " + hc + " color")
     + dato("m² blanco", fmt(r.blanco)) + dato("m² color", fmt(r.color)) + dato("Metros de canto", fmt(r.canto)) + "</div>"
     + '<div class="precio"><div class="resumen" style="margin-top:8px">' + dato("Tablero (hojas completas)", dinero(r.tablero)) + dato("Costo de material", dinero(r.material)) + dato("(a) 8,200 × ml de bajos", dinero(r.reglaA)) + dato("(b) material × 1.5", dinero(r.reglaB))
-    + dato("Precio sugerido", dinero(r.precio), "precio-final") + '</div><p class="nota">' + ganador + " La mano de obra va incluida en el precio. Herrajes: $" + fmt(r.herrajes) + ".</p></div>";
+    + dato("Precio sugerido", dinero(r.precio), "precio-final") + '</div><p class="nota">' + ganador + " La mano de obra va incluida en el precio. Las piezas extra suman al material, no a los metros lineales. Herrajes: $" + fmt(r.herrajes) + ".</p></div>";
 
   $("despiece").innerHTML = pr.modulos.map((m, i) => {
     let t = "<h3>" + (i + 1) + ". " + (m.tipo === "bajo" ? "Bajo" : "Alacena") + " " + m.ancho + "×" + m.alto + "×" + m.prof + (m.nombre ? " · " + esc(m.nombre) : "") + "</h3>" + tablaPiezas(r.porModulo[i]);
@@ -302,6 +333,10 @@ function render() {
     return t;
   }).join("") || '<p class="nota">Sin módulos.</p>';
 
+  const ex = pr.extras || [];
+  $("extras").innerHTML = ex.length ? '<table><tr><th>Mueble · pieza</th><th class="n">Largo</th><th class="n">Ancho</th><th class="n">Cant.</th><th>Material</th><th>Canto</th><th class="no-imprimir"></th></tr>'
+    + ex.map((x, i) => "<tr><td>" + esc((x.mueble ? x.mueble + " · " : "") + x.nombre) + '</td><td class="n">' + x.l + '</td><td class="n">' + x.a + '</td><td class="n">' + x.c + "</td><td>" + x.mat + "</td><td>" + ({ no: "sin canto", uno: "1 lado largo", perim: "4 lados" }[x.canto]) + '</td><td class="no-imprimir"><button class="peligro" onclick="quitarExtra(' + i + ')">Quitar</button></td></tr>').join("") + "</table>"
+    : '<p class="nota">Sin piezas extra.</p>';
   $("consolidado").innerHTML = r.cons.length ? tablaPiezas(r.cons) : '<p class="nota">Sin piezas.</p>';
 
   let hs = "";
@@ -324,6 +359,7 @@ function iniciar() {
   $("pNombre").onchange = e => { actual().nombre = e.target.value || "Sin nombre"; guardar(); render(); };
   $("pCliente").onchange = e => { actual().cliente = e.target.value; guardar(); render(); };
   $("pTaller").onchange = e => { escribir(CLAVES.taller, e.target.value); render(); };
+  $("xOtros").onchange = e => { actual().otros = parseFloat(e.target.value) || 0; guardar(); render(); };
   $("selHoja").onchange = e => { escribir(CLAVES.hojaBlanco, e.target.value); render(); };
   $("chkPrecios").onchange = e => { escribir(CLAVES.ocultar, e.target.checked); render(); };
   guardar(); render();

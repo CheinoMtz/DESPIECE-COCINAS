@@ -1,6 +1,6 @@
 /* Service worker: guarda los archivos para que la app abra sin internet.
    Si cambias algo en index.html, sube la versión (v1 -> v2) para que se actualice. */
-const VERSION = "despiece-v1";
+const VERSION = "despiece-v2";
 const ARCHIVOS = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", e => {
