@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Despiece de cocinas integrales</title>
+<style>
+:root{--fondo:#eef1ee;--tarjeta:#fff;--texto:#16231f;--suave:#5d6b66;--acento:#1d4e89;--borde:#cfd7d2;--peligro:#a32a2a}
+@media(prefers-color-scheme:dark){:root{--fondo:#121816;--tarjeta:#1b2421;--texto:#e8efeb;--suave:#9aaaa3;--acento:#7fb2ea;--borde:#33413b;--peligro:#ef8a8a}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--fondo);color:var(--texto);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:1000px;margin:0 auto;padding:12px}
+h1{font-size:1.3rem;margin:8px 0}
+h2{font-size:1.05rem;margin:0 0 8px}
+section{background:var(--tarjeta);border:1px solid var(--borde);border-radius:8px;padding:12px;margin:12px 0}
+.fila{display:flex;flex-wrap:wrap;gap:8px;align-items:end}
+label{display:flex;flex-direction:column;font-size:.8rem;color:var(--suave);gap:2px;flex:1 1 120px}
+input,select,button{font:inherit;padding:8px;border:1px solid var(--borde);border-radius:6px;background:var(--tarjeta);color:var(--texto);min-height:40px}
+button{cursor:pointer;background:var(--acento);color:#fff;border-color:var(--acento)}
+button.sec{background:transparent;color:var(--acento)}
+button.peligro{background:transparent;color:var(--peligro);border-color:var(--peligro)}
+:focus-visible{outline:3px solid var(--acento);outline-offset:2px}
+.tabla{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.9rem}
+th,td{border-bottom:1px solid var(--borde);padding:4px 6px;text-align:left}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+.resumen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.dato{border:1px solid var(--borde);border-radius:6px;padding:6px 8px}
+.dato b{display:block;font-size:1.15rem}
+.dato span{font-size:.78rem;color:var(--suave)}
+.precio-final{font-size:1.4rem}
+.mod{display:flex;justify-content:space-between;gap:8px;align-items:center;border-bottom:1px solid var(--borde);padding:6px 0}
+.hoja svg{width:100%;height:auto;border:1px solid var(--borde);background:#fff}
+.hoja p{margin:4px 0;font-size:.85rem}
+.nota{color:var(--suave);font-size:.85rem}
+.solo-impresion{display:none}
+body.sin-precios .precio{display:none}
+@media print{
+ :root{--fondo:#fff;--tarjeta:#fff;--texto:#000;--suave:#333;--borde:#999}
+ .no-imprimir{display:none!important}
+ .solo-impresion{display:block;font-weight:700;border-bottom:2px solid #000;padding-bottom:6px;margin-bottom:8px}
+ section{break-inside:avoid;border:none;padding:0}
+ .hoja{break-inside:avoid}
+}
+</style>
+</head>
+<body>
+<main>
+<div class="solo-impresion" id="encabezadoImpresion"></div>
+<h1 class="no-imprimir">Despiece de cocinas integrales</h1>
+
+<section class="no-imprimir" aria-label="Proyecto">
+ <div class="fila">
+  <label>Proyecto guardado<select id="selProyecto"></select></label>
+  <label>Nombre<input id="pNombre"></label>
+  <label>Cliente<input id="pCliente"></label>
+  <label>Taller (encabezado)<input id="pTaller"></label>
+  <label>Hoja de tablero blanco<select id="selHoja"><option value="2440x1220">244 × 122 cm</option><option value="2500x1830">250 × 183 cm (grande)</option></select></label>
+ </div>
+ <div class="fila" style="margin-top:8px">
+  <button onclick="nuevoProyecto()">Nuevo</button>
+  <button class="sec" onclick="duplicarProyecto()">Duplicar</button>
+  <button class="peligro" onclick="borrarProyecto()">Borrar</button>
+  <label style="flex:0 0 auto;flex-direction:row;align-items:center;gap:6px;color:var(--texto)"><input type="checkbox" id="chkPrecios" style="min-height:auto"> Ocultar precios</label>
+  <button class="sec" onclick="window.print()">Imprimir / PDF</button>
+ </div>
+</section>
+
+<section class="no-imprimir" aria-label="Agregar módulo">
+ <h2>Agregar módulo</h2>
+ <div class="fila">
+  <label>Tipo<select id="fTipo" onchange="cambiarTipo()"><option value="bajo">Bajo</option><option value="alacena">Alacena</option></select></label>
+  <label>Ancho de caja (mm)<input id="fAncho" type="number" value="600" min="100"></label>
+  <label>Alto (mm)<input id="fAlto" type="number" value="780"></label>
+  <label>Profundidad (mm)<input id="fProf" type="number" value="600"></label>
+  <label>Puertas<select id="fPuertas"><option>0</option><option selected>1</option><option>2</option></select></label>
+  <label>Entrepaños<select id="fEnt"><option>0</option><option>1</option><option>2</option><option>3</option></select></label>
+  <label>Cajones<select id="fCaj"><option>0</option><option>1</option><option>2</option><option>3</option></select></label>
+  <label>Tapas<select id="fTapas"><option>0</option><option>1</option><option>2</option></select></label>
+  <label>Nombre (opcional)<input id="fNombre"></label>
+  <button onclick="agregarModulo()">Agregar módulo</button>
+ </div>
+ <p class="nota">El ancho de caja es el ancho ya descontando 15 mm por cada tapa.</p>
+</section>
+
+<section aria-label="Módulos"><h2>Módulos</h2><div id="lista"></div></section>
+<section aria-label="Resumen"><h2>Resumen</h2><div id="resumen"></div></section>
+<section aria-label="Despiece por módulo"><h2>Despiece por módulo</h2><div id="despiece"></div></section>
+<section aria-label="Lista de corte"><h2>Lista de corte consolidada</h2><div id="consolidado" class="tabla"></div></section>
+<section aria-label="Hojas"><h2>Hojas necesarias</h2><div id="hojas"></div></section>
+</main>
+
+<script>
+/* ============ CONSTANTES DEL TALLER (editables) ============ */
+const M = 15;               // espesor del tablero (mm)
+const TRAVESANO = 200;      // alto de travesaños de techo y fondo (mm)
+const HOJA_L = 2440, HOJA_A = 1220; // hoja de tablero (mm)
+// Precio de una hoja blanca según el formato elegido
+function precioHojaBlanco() {
+  return medidasHoja("blanco").l === 2500 ? PRECIOS.hojaBlancoGrande : PRECIOS.hojaBlancoChica;
+}
+// Formatos de hoja en blanco (mm). El color siempre usa HOJA_L × HOJA_A.
+const HOJAS_BLANCO = { "2440x1220": [2440, 1220], "2500x1830": [2500, 1830] };
+function medidasHoja(mat) {
+  if (mat === "color") return { l: HOJA_L, a: HOJA_A };
+  const f = HOJAS_BLANCO[leer(CLAVES.hojaBlanco, "2440x1220")] || HOJAS_BLANCO["2440x1220"];
+  return { l: f[0], a: f[1] };
+}
+const KERF = 3;             // separación de corte (mm)
+const PRECIOS = {
+  // El tablero se cobra por HOJA COMPLETA (no se venden medias hojas ni cuartos)
+  hojaBlancoChica: 800,   // $ por hoja blanca 244×122
+  hojaBlancoGrande: 1100, // $ por hoja blanca 250×183
+  hojaColor: 1300,        // $ por hoja de color 244×122 (equivale a 436.74 $/m²)
+  cantoMl: 4.50,      // $/ml de canto
+  bisagra: 65,        // $ por pieza (130 el par)
+  corredera: 80,      // $ por par
+  jaladera: 20,       // $ por pieza
+  pata: 15,           // $ por pieza
+  consumibles: 250,   // $ por proyecto
+  mlBajo: 8200,       // $ por metro lineal de muebles bajos
+  factorMaterial: 1.5 // material × 1.5
+};
+const DEFECTO = { bajo: { alto: 780, prof: 600 }, alacena: { alto: 700, prof: 300 } };
+const CLAVES = { proyectos: "cocinas.proyectos", actual: "cocinas.actual", taller: "cocinas.taller", ocultar: "cocinas.ocultarPrecios", hojaBlanco: "cocinas.hojaBlanco" };
+
+/* ============ UTILIDADES ============ */
+const r1 = n => Math.round(n * 10) / 10;
+const fmt = n => n.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const dinero = n => '<span class="precio">$' + fmt(n) + "</span>";
+const esc = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const $ = id => document.getElementById(id);
+
+/* ============ DESPIECE (reglas A-D) ============ */
+// Cada pieza: { nombre, l (largo), a (ancho), c (cantidad), mat, canto }
+// canto: "perim" = los 4 lados, "uno" = un lado largo, "no" = sin canto (supuesto editable)
+function despiece(m) {
+  const p = [], a = m.ancho, h = m.alto, d = m.prof;
+  const add = (nombre, l, an, c, mat, canto) => { if (c > 0) p.push({ nombre, l: r1(l), a: r1(an), c, mat, canto }); };
+  if (m.tipo === "bajo") {
+    // A) Bajo: laterales encima del piso, travesaños arriba y abajo
+    add("Lateral", h - M, d, 2, "blanco", "uno");
+    add("Piso", a, d, 1, "blanco", "uno");
+    add("Techo", a - 30, TRAVESANO, 2, "blanco", "uno");
+    add("Fondo", a - 30, TRAVESANO, 2, "blanco", "no");
+  } else {
+    // B) Alacena: laterales completos, fondo completo
+    add("Lateral", h, d, 2, "blanco", "uno");
+    add("Piso", a - 30, d, 1, "blanco", "uno");
+    add("Techo", a - 30, d, 1, "blanco", "uno");
+    add("Fondo", a - 30, h - 30, 1, "blanco", "no");
+  }
+  add("Entrepaño", a - 30, d - 10, m.ent, "blanco", "uno");
+  if (m.puertas > 0) {
+    const anchoP = m.puertas === 1 ? a - 4 : (a - 6) / 2;
+    const altoP = m.tipo === "bajo" ? h - 40 : h;
+    add("Puerta", altoP, anchoP, m.puertas, "color", "perim");
+  }
+  if (m.caj > 0) { // C) Cajones
+    const n = m.caj, altoFrente = (740 - 3 * (n - 1)) / n, altoCaja = (720 - 15 * (n - 1)) / n;
+    const largo = d - 50, anchoCaja = a - 30 - 26;
+    add("Frente de cajón", altoFrente, a - 4, n, "color", "perim");
+    add("Lateral de caja", largo - 30, altoCaja, 2 * n, "blanco", "no");
+    add("Frente/trasera de caja", anchoCaja, altoCaja, 2 * n, "blanco", "no");
+    add("Fondo de caja", anchoCaja, largo - 30, n, "blanco", "no");
+  }
+  // D) Tapas laterales
+  add("Tapa lateral", m.tipo === "bajo" ? h - M : h, d, m.tapas, "color", "perim");
+  return p;
+}
+// Datos de la caja de cajón para mostrarlos en pantalla
+function datosCaja(m) {
+  const n = m.caj, largo = m.prof - 50;
+  return { alto: r1((720 - 15 * (n - 1)) / n), ancho: m.ancho - 56, largo, lateral: largo - 30 };
+}
+
+/* ============ CONSOLIDADO ============ */
+function consolidar(piezas) {
+  const mapa = {};
+  piezas.forEach(q => {
+    const k = [q.nombre, q.l, q.a, q.mat].join("|");
+    if (mapa[k]) mapa[k].c += q.c; else mapa[k] = { ...q };
+  });
+  return Object.values(mapa).sort((x, y) => (x.mat > y.mat ? 1 : x.mat < y.mat ? -1 : y.l * y.a - x.l * x.a));
+}
+
+/* ============ ACOMODO EN HOJAS (filas / shelf) ============ */
+function empacar(lista, HL, HA) { // HL × HA = medidas de la hoja
+  const u = [];
+  lista.forEach(q => { for (let i = 0; i < q.c; i++) u.push({ l: q.l, a: q.a, w: Math.max(q.l, q.a), h: Math.min(q.l, q.a) }); });
+  u.sort((x, y) => y.w * y.h - x.w * x.h); // mayor área primero
+  const hojas = []; let hoja = null, x = 0, y = 0, altFila = 0;
+  const nueva = () => { hoja = { piezas: [], area: 0 }; hojas.push(hoja); x = 0; y = 0; altFila = 0; };
+  u.forEach(q => {
+    if (!hoja) nueva();
+    if (x + q.w > HL) { y += altFila + KERF; x = 0; altFila = 0; } // fila nueva
+    if (y + q.h > HA) nueva();                                      // hoja nueva
+    hoja.piezas.push({ x, y, w: q.w, h: q.h });
+    hoja.area += q.w * q.h;
+    x += q.w + KERF; altFila = Math.max(altFila, q.h);
+  });
+  return hojas;
+}
+
+/* ============ CÁLCULO DEL PROYECTO ============ */
+function calcular(pr) {
+  const todas = [], porModulo = pr.modulos.map(m => { const ps = despiece(m); todas.push(...ps); return ps; });
+  const cons = consolidar(todas);
+  const m2 = mat => todas.filter(q => q.mat === mat).reduce((s, q) => s + q.l * q.a * q.c, 0) / 1e6;
+  const canto = todas.reduce((s, q) => s + q.c * (q.canto === "perim" ? 2 * (q.l + q.a) : q.canto === "uno" ? Math.max(q.l, q.a) : 0), 0) / 1000;
+  const mb = medidasHoja("blanco"), mc = medidasHoja("color");
+  const hojasBlanco = empacar(cons.filter(q => q.mat === "blanco"), mb.l, mb.a), hojasColor = empacar(cons.filter(q => q.mat === "color"), mc.l, mc.a);
+  let herrajes = 0;
+  pr.modulos.forEach(m => {
+    herrajes += m.puertas * (m.alto > 900 ? 3 : 2) * PRECIOS.bisagra + m.caj * PRECIOS.corredera
+      + (m.puertas + m.caj) * PRECIOS.jaladera + (m.tipo === "bajo" ? 4 * PRECIOS.pata : 0);
+  });
+  const mlBajos = pr.modulos.filter(m => m.tipo === "bajo").reduce((s, m) => s + (m.ancho + M * m.tapas) / 1000, 0);
+  const blanco = m2("blanco"), color = m2("color");
+  const tablero = hojasBlanco.length * precioHojaBlanco() + hojasColor.length * PRECIOS.hojaColor; // hojas completas
+  const material = tablero + canto * PRECIOS.cantoMl + herrajes + (pr.modulos.length ? PRECIOS.consumibles : 0);
+  const reglaA = PRECIOS.mlBajo * mlBajos, reglaB = material * PRECIOS.factorMaterial;
+  return { porModulo, cons, blanco, color, canto, hojasBlanco, hojasColor, herrajes, mlBajos, tablero, material, reglaA, reglaB, precio: Math.max(reglaA, reglaB) };
+}
+
+/* ============ ESTADO Y ALMACENAMIENTO ============ */
+let proyectos = [], actualId = null;
+const leer = (k, def) => { try { const v = localStorage.getItem(k); return v === null ? def : JSON.parse(v); } catch (e) { return def; } };
+const escribir = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* sin almacenamiento */ } };
+const actual = () => proyectos.find(p => p.id === actualId);
+function guardar() { escribir(CLAVES.proyectos, proyectos); escribir(CLAVES.actual, actualId); }
+function crearProyecto(nombre) { return { id: "p" + Date.now() + Math.floor(Math.random() * 1000), nombre, cliente: "", fecha: new Date().toISOString().slice(0, 10), modulos: [] }; }
+
+function nuevoProyecto() { const p = crearProyecto("Proyecto " + (proyectos.length + 1)); proyectos.push(p); actualId = p.id; guardar(); render(); }
+function duplicarProyecto() {
+  const o = actual(), p = JSON.parse(JSON.stringify(o));
+  p.id = crearProyecto("").id; p.nombre = o.nombre + " (copia)";
+  proyectos.push(p); actualId = p.id; guardar(); render();
+}
+function borrarProyecto() {
+  if (!confirm("¿Borrar el proyecto \"" + actual().nombre + "\"? No se puede deshacer.")) return;
+  proyectos = proyectos.filter(p => p.id !== actualId);
+  if (!proyectos.length) proyectos.push(crearProyecto("Proyecto 1")); // nunca queda vacía
+  actualId = proyectos[0].id; guardar(); render();
+}
+
+/* ============ FORMULARIO ============ */
+function cambiarTipo() { const d = DEFECTO[$("fTipo").value]; $("fAlto").value = d.alto; $("fProf").value = d.prof; }
+function agregarModulo() {
+  const num = id => parseFloat($(id).value) || 0;
+  const m = { tipo: $("fTipo").value, ancho: num("fAncho"), alto: num("fAlto"), prof: num("fProf"), puertas: num("fPuertas"), ent: num("fEnt"), caj: num("fCaj"), tapas: num("fTapas"), nombre: $("fNombre").value.trim() };
+  if (m.ancho < 100 || m.alto < 200 || m.prof < 100) { alert("Revisa las medidas: ancho, alto y profundidad deben ser válidos."); return; }
+  actual().modulos.push(m); $("fNombre").value = ""; guardar(); render();
+}
+function quitarModulo(i) { actual().modulos.splice(i, 1); guardar(); render(); }
+
+/* ============ DIBUJO DE HOJAS ============ */
+function svgHoja(h, mat) {
+  const relleno = mat === "color" ? "#e6b98a" : "#e9edf0";
+  const med = medidasHoja(mat);
+  let s = '<svg viewBox="0 0 ' + med.l + " " + med.a + '" role="img" aria-label="Hoja de tablero con piezas acomodadas">';
+  h.piezas.forEach(q => {
+    s += '<rect x="' + q.x + '" y="' + q.y + '" width="' + q.w + '" height="' + q.h + '" fill="' + relleno + '" stroke="#16231f" stroke-width="3"/>';
+    if (q.w > 240 && q.h > 70) s += '<text x="' + (q.x + q.w / 2) + '" y="' + (q.y + q.h / 2) + '" font-size="' + Math.min(44, q.h * 0.4) + '" text-anchor="middle" dominant-baseline="middle" fill="#16231f">' + r1(q.w) + "×" + r1(q.h) + "</text>";
+  });
+  return s + "</svg>";
+}
+
+/* ============ PINTADO ============ */
+const tablaPiezas = (ps, extra) => '<div class="tabla"><table><tr><th>Pieza</th><th class="n">Largo</th><th class="n">Ancho</th><th class="n">Cant.</th><th>Material</th></tr>'
+  + ps.map(q => "<tr><td>" + q.nombre + '</td><td class="n">' + q.l + '</td><td class="n">' + q.a + '</td><td class="n">' + q.c + "</td><td>" + q.mat + "</td></tr>").join("") + "</table></div>";
+
+function render() {
+  const pr = actual(), r = calcular(pr);
+  $("selProyecto").innerHTML = proyectos.map(p => '<option value="' + p.id + '"' + (p.id === actualId ? " selected" : "") + ">" + esc(p.nombre) + "</option>").join("");
+  $("pNombre").value = pr.nombre; $("pCliente").value = pr.cliente; $("pTaller").value = leer(CLAVES.taller, "");
+  $("selHoja").value = leer(CLAVES.hojaBlanco, "2440x1220");
+  $("chkPrecios").checked = leer(CLAVES.ocultar, false); document.body.classList.toggle("sin-precios", $("chkPrecios").checked);
+  $("encabezadoImpresion").textContent = (leer(CLAVES.taller, "") || "TALLER").toUpperCase() + " · Uso interno · " + pr.nombre + " · " + pr.cliente + " · " + pr.fecha + " · " + pr.modulos.length + " módulos";
+
+  $("lista").innerHTML = pr.modulos.length ? pr.modulos.map((m, i) =>
+    '<div class="mod"><span><b>' + (i + 1) + ". " + (m.tipo === "bajo" ? "Bajo" : "Alacena") + (m.nombre ? " · " + esc(m.nombre) : "") + "</b> " + m.ancho + "×" + m.alto + "×" + m.prof
+    + " mm · " + m.puertas + " puerta(s) · " + m.ent + " entrepaño(s) · " + m.caj + " cajón(es) · " + m.tapas + " tapa(s)</span>"
+    + '<button class="peligro no-imprimir" onclick="quitarModulo(' + i + ')">Quitar</button></div>').join("") : '<p class="nota">Aún no hay módulos. Agrega el primero arriba.</p>';
+
+  const dato = (t, v, cl) => '<div class="dato"><span>' + t + "</span><b" + (cl ? ' class="' + cl + '"' : "") + ">" + v + "</b></div>";
+  const hb = r.hojasBlanco.length, hc = r.hojasColor.length;
+  const ganador = r.reglaA >= r.reglaB ? "Mandó la regla (a): metros lineales de bajos × $8,200." : "Mandó la regla (b): material × 1.5.";
+  $("resumen").innerHTML = '<div class="resumen">' + dato("Metros lineales de bajos", fmt(r.mlBajos)) + dato("Hojas estimadas", hb + " blanco + " + hc + " color")
+    + dato("m² blanco", fmt(r.blanco)) + dato("m² color", fmt(r.color)) + dato("Metros de canto", fmt(r.canto)) + "</div>"
+    + '<div class="precio"><div class="resumen" style="margin-top:8px">' + dato("Tablero (hojas completas)", dinero(r.tablero)) + dato("Costo de material", dinero(r.material)) + dato("(a) 8,200 × ml de bajos", dinero(r.reglaA)) + dato("(b) material × 1.5", dinero(r.reglaB))
+    + dato("Precio sugerido", dinero(r.precio), "precio-final") + '</div><p class="nota">' + ganador + " La mano de obra va incluida en el precio. Herrajes: $" + fmt(r.herrajes) + ".</p></div>";
+
+  $("despiece").innerHTML = pr.modulos.map((m, i) => {
+    let t = "<h3>" + (i + 1) + ". " + (m.tipo === "bajo" ? "Bajo" : "Alacena") + " " + m.ancho + "×" + m.alto + "×" + m.prof + (m.nombre ? " · " + esc(m.nombre) : "") + "</h3>" + tablaPiezas(r.porModulo[i]);
+    if (m.caj > 0) { const c = datosCaja(m); t += '<p class="nota">Caja de cajón: alto ' + c.alto + " · ancho " + c.ancho + " · largo " + c.largo + " (laterales de " + c.lateral + ")</p>"; }
+    return t;
+  }).join("") || '<p class="nota">Sin módulos.</p>';
+
+  $("consolidado").innerHTML = r.cons.length ? tablaPiezas(r.cons) : '<p class="nota">Sin piezas.</p>';
+
+  let hs = "";
+  [["blanco", r.hojasBlanco], ["color", r.hojasColor]].forEach(([mat, hojas]) => {
+    if (!hojas.length) return;
+    const med = medidasHoja(mat);
+    hs += "<h3>Total " + mat + ": " + hojas.length + " hoja(s) de " + med.l + " × " + med.a + " mm</h3>";
+    hojas.forEach((h, i) => { hs += '<div class="hoja">' + svgHoja(h, mat) + "<p>Hoja " + (i + 1) + " de " + mat + " · " + h.piezas.length + " piezas · " + fmt(h.area / (med.l * med.a) * 100) + "% de uso</p></div>"; });
+  });
+  $("hojas").innerHTML = hs || '<p class="nota">Sin hojas.</p>';
+}
+
+/* ============ INICIO ============ */
+function iniciar() {
+  proyectos = leer(CLAVES.proyectos, []);
+  if (!Array.isArray(proyectos) || !proyectos.length) proyectos = [crearProyecto("Proyecto 1")];
+  actualId = leer(CLAVES.actual, null);
+  if (!actual()) actualId = proyectos[0].id;
+  $("selProyecto").onchange = e => { actualId = e.target.value; guardar(); render(); };
+  $("pNombre").onchange = e => { actual().nombre = e.target.value || "Sin nombre"; guardar(); render(); };
+  $("pCliente").onchange = e => { actual().cliente = e.target.value; guardar(); render(); };
+  $("pTaller").onchange = e => { escribir(CLAVES.taller, e.target.value); render(); };
+  $("selHoja").onchange = e => { escribir(CLAVES.hojaBlanco, e.target.value); render(); };
+  $("chkPrecios").onchange = e => { escribir(CLAVES.ocultar, e.target.checked); render(); };
+  guardar(); render();
+}
+if (typeof window !== "undefined") iniciar();
+</script>
+</body>
+</html>
