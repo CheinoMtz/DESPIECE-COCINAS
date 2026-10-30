@@ -4,6 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Despiece de cocinas integrales</title>
+<!-- Para poder instalarla como aplicación -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1d4e89">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
 <style>
 :root{--fondo:#eef1ee;--tarjeta:#fff;--texto:#16231f;--suave:#5d6b66;--acento:#1d4e89;--borde:#cfd7d2;--peligro:#a32a2a}
 @media(prefers-color-scheme:dark){:root{--fondo:#121816;--tarjeta:#1b2421;--texto:#e8efeb;--suave:#9aaaa3;--acento:#7fb2ea;--borde:#33413b;--peligro:#ef8a8a}}
@@ -323,7 +328,11 @@ function iniciar() {
   $("chkPrecios").onchange = e => { escribir(CLAVES.ocultar, e.target.checked); render(); };
   guardar(); render();
 }
-if (typeof window !== "undefined") iniciar();
+if (typeof window !== "undefined") {
+  iniciar();
+  // Registra el service worker (permite instalar la app y usarla sin internet). Solo funciona con http/https.
+  if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) navigator.serviceWorker.register("sw.js").catch(() => {});
+}
 </script>
 </body>
 </html>
